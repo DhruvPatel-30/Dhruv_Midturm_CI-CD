@@ -1,0 +1,19 @@
+{
+  "name": "ci-sample-node-app",
+  "version": "1.0.0",
+  "description": "Sample Node.js app for CI pipeline demo (Build, Test, Docker push).",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest --runInBand",
+    "lint": "node --check index.js || true"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.6.1"
+  }
+}
