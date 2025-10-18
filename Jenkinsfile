@@ -2,8 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_USER = credentials('dockerhub-username')  // Docker Hub username
-        DOCKER_PASS = credentials('dockerhub-password')  // Docker Hub token
         IMAGE_NAME = "ci-sample-node-app"
     }
 
@@ -33,18 +31,19 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image') {
             steps {
-                bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:latest ."
-                bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:%BUILD_NUMBER% ."
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
-                bat "docker push %DOCKER_USER%/%IMAGE_NAME%:latest"
-                bat "docker push %DOCKER_USER%/%IMAGE_NAME%:%BUILD_NUMBER%"
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-username', 
+                        usernameVariable: 'DOCKER_USER', 
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:latest ."
+                    bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
+                    bat "docker push %DOCKER_USER%/%IMAGE_NAME%:latest"
+                }
             }
         }
     }
@@ -54,7 +53,6 @@ pipeline {
             echo 'Cleaning up workspace...'
             cleanWs()
         }
-
         failure {
             echo 'Build failed!'
         }
