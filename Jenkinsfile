@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        // Docker credentials stored in Jenkins Credentials (see Step 3)
-        DOCKERHUB_CREDENTIALS = 'dockerhub-cred-id'
-        IMAGE_NAME = 'ci-sample-node-app'
-        DOCKER_USER = credentials('dockerhub-cred-id') // username/password stored together
+        // Docker credentials stored in Jenkins (Username + Password)
+        DOCKERHUB_USER = credentials('dockerhub-username') // your Docker Hub username credential ID
+        DOCKERHUB_PASS = credentials('dockerhub-password') // your Docker Hub password/token credential ID
+        IMAGE_NAME = "ci-sample-node-app"
     }
 
     stages {
@@ -15,45 +15,38 @@ pipeline {
             }
         }
 
-        stage('Setup Node.js') {
+        stage('Check Node.js') {
             steps {
-                // Install Node 18 using NodeJS plugin or nvm
-                sh 'curl -fsSL https://deb.nodesource.com/setup_18.x | bash -'
-                sh 'apt-get install -y nodejs'
-                sh 'node -v'
-                sh 'npm -v'
+                // Make sure Node.js is installed on your Windows agent
+                bat 'node -v'
+                bat 'npm -v'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm ci'
+                bat 'npm ci'
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'npm test'
+                bat 'npm test'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    docker.build("${DOCKER_USER_USR}/${IMAGE_NAME}:latest")
-                    docker.build("${DOCKER_USER_USR}/${IMAGE_NAME}:${env.BUILD_NUMBER}")
-                }
+                bat "docker build -t %DOCKERHUB_USER%/%IMAGE_NAME%:latest ."
+                bat "docker build -t %DOCKERHUB_USER%/%IMAGE_NAME%:%BUILD_NUMBER% ."
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-cred-id') {
-                        docker.image("${DOCKER_USER_USR}/${IMAGE_NAME}:latest").push()
-                        docker.image("${DOCKER_USER_USR}/${IMAGE_NAME}:${env.BUILD_NUMBER}").push()
-                    }
-                }
+                bat "docker login -u %DOCKERHUB_USER% -p %DOCKERHUB_PASS%"
+                bat "docker push %DOCKERHUB_USER%/%IMAGE_NAME%:latest"
+                bat "docker push %DOCKERHUB_USER%/%IMAGE_NAME%:%BUILD_NUMBER%"
             }
         }
     }
@@ -61,7 +54,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up workspace...'
-            deleteDir()
+            cleanWs()
         }
         failure {
             echo 'Build failed!'
